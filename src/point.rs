@@ -3,7 +3,7 @@ use gerber_types::Coordinates;
 use i_float::float::compatible::FloatPointCompatible;
 use nalgebra::Vector2;
 
-#[derive(Deref, DerefMut, Add, Sub, Mul, Div, Clone, Copy)]
+#[derive(Debug, Deref, DerefMut, Add, Sub, Mul, Div, Clone, Copy)]
 pub struct Point(Vector2<f64>);
 
 impl Point {

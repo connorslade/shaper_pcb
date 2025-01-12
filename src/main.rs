@@ -85,30 +85,30 @@ fn main() -> Result<()> {
         union = union.overlay(&[path], OverlayRule::Union, FillRule::EvenOdd);
     }
 
-    let mut svg = Document::new();
-
     let (mut min, mut max) = (Point::repeat(f64::MAX), Point::repeat(f64::MIN));
-    for shape in union.into_iter().flatten() {
-        for point in shape.iter() {
-            min.x = min.x.min(point.x);
-            min.y = min.y.min(point.y);
+    for point in union.iter().flatten().flatten() {
+        min.x = min.x.min(point.x);
+        min.y = min.y.min(point.y);
+        max.x = max.x.max(point.x);
+        max.y = max.y.max(point.y);
+    }
 
-            max.x = max.x.max(point.x);
-            max.y = max.y.max(point.y);
-        }
+    let mut svg = Document::new().set("viewBox", (min.x, min.y, max.x - min.x, max.y - min.y));
 
+    for shape in union.iter().flatten() {
         let node = Polygon::new()
             .set("fill", "black")
             .set("stroke", "black")
             .set("stroke-width", "0")
             .set(
                 "points",
-                shape.iter().map(|x| (x[0], x[1])).collect::<Vec<_>>(),
+                shape
+                    .iter()
+                    .map(|p| (p.x, -p.y + max.y + min.y))
+                    .collect::<Vec<_>>(),
             );
         svg = svg.add(node);
     }
-
-    svg = svg.set("viewBox", (min.x, min.y, max.x, max.y));
 
     fs::write(args.output, svg.to_string())?;
     Ok(())
