@@ -1,5 +1,9 @@
 use std::f64::consts::PI;
 
+use i_overlay::{
+    core::{fill_rule::FillRule, overlay_rule::OverlayRule},
+    float::single::SingleFloatOverlay,
+};
 use itertools::Itertools;
 use nalgebra::Vector2;
 
@@ -45,4 +49,28 @@ pub fn generate_rectangle(center: Point, size: Point) -> Vec<Point> {
     let bottom_left = Point::new(center.x - half_width, center.y - half_height);
 
     vec![top_left, top_right, bottom_right, bottom_left]
+}
+
+pub fn union_shapes(mut shapes: Vec<Vec<Point>>) -> Vec<Vec<Vec<Point>>> {
+    if shapes.is_empty() {
+        return Vec::new();
+    }
+
+    let mut union = vec![vec![shapes.remove(0)]];
+    for path in shapes.into_iter() {
+        union = union.overlay(&[path], OverlayRule::Union, FillRule::EvenOdd);
+    }
+    union
+}
+
+pub fn bounds<'a>(points: impl Iterator<Item = &'a Point>) -> (Point, Point) {
+    let (mut min, mut max) = (Point::repeat(f64::MAX), Point::repeat(f64::MIN));
+    for point in points {
+        min.x = min.x.min(point.x);
+        min.y = min.y.min(point.y);
+        max.x = max.x.max(point.x);
+        max.y = max.y.max(point.y);
+    }
+
+    (min, max)
 }
