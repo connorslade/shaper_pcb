@@ -1,0 +1,10 @@
+[package]
+name = "shaper_pcb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+gerber-types = "0.2.0"
+gerber_parser = "0.1.2"
+svg = "0.18.0"
