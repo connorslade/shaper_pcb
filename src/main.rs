@@ -1,5 +1,4 @@
 use std::{
-    f64::{self, consts::PI},
     fs::{self, File},
     io::BufReader,
     mem,
@@ -11,10 +10,12 @@ use i_overlay::{
     core::{fill_rule::FillRule, overlay_rule::OverlayRule},
     float::single::SingleFloatOverlay,
 };
-use itertools::Itertools;
 use svg::{node::element::Polygon, Document};
 
-type Point = [f64; 2];
+mod geometry;
+mod point;
+use geometry::{close_path, generate_circle};
+
 const CIRCLE_SIDES: u32 = 20;
 
 fn main() -> Result<()> {
@@ -31,19 +32,17 @@ fn main() -> Result<()> {
             Command::FunctionCode(FunctionCode::DCode(code)) => match code {
                 DCode::Operation(Operation::Move(mov)) => {
                     if !path.is_empty() {
-                        paths.push(close_path(&mem::take(&mut path), path_thickness));
+                        paths.push(close_path(mem::take(&mut path), path_thickness));
                     }
 
-                    let x: f64 = mov.x.unwrap().into();
-                    let y: f64 = mov.y.unwrap().into();
-                    paths.push(generate_circle([x, y], path_thickness / 2.0, CIRCLE_SIDES));
-                    path.push([x, y]);
+                    let point = mov.into();
+                    paths.push(generate_circle(point, path_thickness / 2.0, CIRCLE_SIDES));
+                    path.push(point);
                 }
                 DCode::Operation(Operation::Interpolate(pos, _offset)) => {
-                    let x: f64 = pos.x.unwrap().into();
-                    let y: f64 = pos.y.unwrap().into();
-                    paths.push(generate_circle([x, y], path_thickness / 2.0, CIRCLE_SIDES));
-                    path.push([x, y]);
+                    let point = pos.into();
+                    paths.push(generate_circle(point, path_thickness / 2.0, CIRCLE_SIDES));
+                    path.push(point);
                 }
                 _ => {}
             },
@@ -52,7 +51,7 @@ fn main() -> Result<()> {
     }
 
     if !path.is_empty() {
-        paths.push(close_path(&path, path_thickness));
+        paths.push(close_path(path, path_thickness));
     }
 
     let mut union = vec![vec![paths.remove(0)]];
@@ -72,41 +71,4 @@ fn main() -> Result<()> {
 
     fs::write("out.svg", svg.to_string())?;
     Ok(())
-}
-
-/// Converts the input line into a polygon with the defined thickness
-fn close_path(path: &Vec<Point>, path_thickness: f64) -> Vec<Point> {
-    let mut out = Vec::new();
-    let half_thickness = path_thickness / 2.0;
-
-    for (p1, p2) in path.iter().tuple_windows() {
-        let dx = p2[0] - p1[0];
-        let dy = p2[1] - p1[1];
-        let length = (dx * dx + dy * dy).sqrt();
-
-        let px = -dy / length * half_thickness;
-        let py = dx / length * half_thickness;
-
-        out.push([p1[0] + px, p1[1] + py]);
-        out.push([p1[0] - px, p1[1] - py]);
-        out.push([p2[0] - px, p2[1] - py]);
-        out.push([p2[0] + px, p2[1] + py]);
-    }
-
-    out
-}
-
-/// Generates a polygon approxapating a circle with the defined number of sides.
-fn generate_circle(center: Point, radius: f64, sides: u32) -> Vec<Point> {
-    let mut out = Vec::new();
-
-    for i in 0..sides {
-        let angle = (i as f64 / sides as f64) * 2.0 * PI;
-        out.push([
-            center[0] + angle.cos() * radius,
-            center[1] + angle.sin() * radius,
-        ]);
-    }
-
-    out
 }

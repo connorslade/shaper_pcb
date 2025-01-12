@@ -5,8 +5,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.95"
+derive_more = { version = "1.0.0", features = ["full"] }
 gerber-types = "0.2.0"
 gerber_parser = "0.1.2"
+i_float = "1.6.0"
 i_overlay = "1.9.4"
 itertools = "0.14.0"
+nalgebra = "0.33.2"
 svg = "0.18.0"
