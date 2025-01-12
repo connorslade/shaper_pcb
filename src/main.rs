@@ -1,3 +1,4 @@
+use core::f64;
 use std::{
     fs::{self, File},
     io::BufReader,
@@ -81,13 +82,24 @@ fn main() -> Result<()> {
 
     let mut svg = Document::new();
 
+    let (mut min, mut max) = (Point::repeat(f64::MAX), Point::repeat(f64::MIN));
     for shape in union.into_iter().flatten() {
+        for point in shape.iter() {
+            min.x = min.x.min(point.x);
+            min.y = min.y.min(point.y);
+
+            max.x = max.x.max(point.x);
+            max.y = max.y.max(point.y);
+        }
+
         let node = Polygon::new().set(
             "points",
             shape.iter().map(|x| (x[0], x[1])).collect::<Vec<_>>(),
         );
         svg = svg.add(node);
     }
+
+    svg = svg.set("viewBox", (min.x, min.y, max.x, max.y));
 
     fs::write("out.svg", svg.to_string())?;
     Ok(())

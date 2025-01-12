@@ -10,6 +10,10 @@ impl Point {
     pub fn new(x: f64, y: f64) -> Self {
         Vector2::new(x, y).into()
     }
+
+    pub fn repeat(v: f64) -> Self {
+        Vector2::repeat(v).into()
+    }
 }
 
 impl From<Vector2<f64>> for Point {
