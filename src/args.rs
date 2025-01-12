@@ -1,17 +1,29 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Args, Parser};
 
 #[derive(Parser)]
 #[command(version, about)]
-pub struct Args {
+pub struct Arguments {
     /// Gerber file to process
     pub input: PathBuf,
-
     /// Optional outline layer
-    #[clap(short)]
+    #[clap(long, short)]
     pub outline: Option<PathBuf>,
-
     /// SVG file to output
     pub output: PathBuf,
+
+    #[clap(flatten)]
+    pub config: Configuration,
+}
+
+#[derive(Args)]
+pub struct Configuration {
+    /// Aperture radius multiplier
+    #[clap(long, default_value_t = 1.0)]
+    pub aperture_thickness: f64,
+
+    /// Trace thickness multiplier
+    #[clap(long, default_value_t = 1.0)]
+    pub trace_thickness: f64,
 }

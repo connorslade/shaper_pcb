@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::Result;
-use args::Args;
+use args::Arguments;
 use clap::Parser;
 use gerber_parser::gerber_doc::GerberDoc;
 use pcb::Pcb;
@@ -18,16 +18,16 @@ mod point;
 const CIRCLE_SIDES: u32 = 50;
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let args = Arguments::parse();
 
-    let mut pcb = Pcb::default();
+    let mut pcb = Pcb::new(args.config);
     pcb.add_traces(load_gerber(&args.input)?);
 
     if let Some(outline) = args.outline {
         pcb.add_guide(load_gerber(&outline)?);
     }
 
-    let svg = pcb.to_svg();
+    let svg = pcb.into_svg();
     fs::write(args.output, svg.to_string())?;
     Ok(())
 }
