@@ -6,6 +6,8 @@ use std::{
 };
 
 use anyhow::Result;
+use args::Args;
+use clap::Parser;
 use gerber_types::{Aperture, Command, DCode, FunctionCode, Operation};
 use i_overlay::{
     core::{fill_rule::FillRule, overlay_rule::OverlayRule},
@@ -14,6 +16,7 @@ use i_overlay::{
 use point::Point;
 use svg::{node::element::Polygon, Document};
 
+mod args;
 mod geometry;
 mod point;
 use geometry::{close_path, generate_circle, generate_rectangle};
@@ -21,7 +24,9 @@ use geometry::{close_path, generate_circle, generate_rectangle};
 const CIRCLE_SIDES: u32 = 100;
 
 fn main() -> Result<()> {
-    let input = File::open("/home/connorslade/Documents/LibrePCB/projects/Relay Logic/RS_Latch/output/v1/gerber/Relay_Logic_COPPER-TOP.gbr")?;
+    let args = Args::parse();
+
+    let input = File::open(args.input)?;
     let doc = gerber_parser::parser::parse_gerber(BufReader::new(input));
 
     let mut aperture: Option<&Aperture> = None;
@@ -92,15 +97,19 @@ fn main() -> Result<()> {
             max.y = max.y.max(point.y);
         }
 
-        let node = Polygon::new().set(
-            "points",
-            shape.iter().map(|x| (x[0], x[1])).collect::<Vec<_>>(),
-        );
+        let node = Polygon::new()
+            .set("fill", "black")
+            .set("stroke", "black")
+            .set("stroke-width", "0")
+            .set(
+                "points",
+                shape.iter().map(|x| (x[0], x[1])).collect::<Vec<_>>(),
+            );
         svg = svg.add(node);
     }
 
     svg = svg.set("viewBox", (min.x, min.y, max.x, max.y));
 
-    fs::write("out.svg", svg.to_string())?;
+    fs::write(args.output, svg.to_string())?;
     Ok(())
 }
