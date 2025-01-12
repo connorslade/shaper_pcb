@@ -16,8 +16,7 @@ pub fn close_path(path: Vec<Point>, path_thickness: f64) -> Vec<Point> {
         let normal = Vector2::new(-direction.y, direction.x)
             .scale(half_thickness)
             .into();
-
-        out.extend_from_slice(&[p1 + normal, p1 - normal, p2 + normal, p2 - normal]);
+        out.extend_from_slice(&[p1 + normal, p1 - normal, p2 - normal, p2 + normal]);
     }
 
     out
@@ -34,4 +33,16 @@ pub fn generate_circle(center: Point, radius: f64, sides: u32) -> Vec<Point> {
     }
 
     out
+}
+
+pub fn generate_rectangle(center: Point, size: Point) -> Vec<Point> {
+    let half_width = size.x / 2.0;
+    let half_height = size.y / 2.0;
+
+    let top_left = Point::new(center.x - half_width, center.y + half_height);
+    let top_right = Point::new(center.x + half_width, center.y + half_height);
+    let bottom_right = Point::new(center.x + half_width, center.y - half_height);
+    let bottom_left = Point::new(center.x - half_width, center.y - half_height);
+
+    vec![top_left, top_right, bottom_right, bottom_left]
 }

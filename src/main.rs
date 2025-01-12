@@ -5,16 +5,17 @@ use std::{
 };
 
 use anyhow::Result;
-use gerber_types::{Command, DCode, FunctionCode, Operation};
+use gerber_types::{Aperture, Command, DCode, FunctionCode, Operation};
 use i_overlay::{
     core::{fill_rule::FillRule, overlay_rule::OverlayRule},
     float::single::SingleFloatOverlay,
 };
+use point::Point;
 use svg::{node::element::Polygon, Document};
 
 mod geometry;
 mod point;
-use geometry::{close_path, generate_circle};
+use geometry::{close_path, generate_circle, generate_rectangle};
 
 const CIRCLE_SIDES: u32 = 20;
 
@@ -24,6 +25,7 @@ fn main() -> Result<()> {
 
     let path_thickness = 0.5 / 2.0;
 
+    let mut aperture = None;
     let mut path = Vec::new();
     let mut paths = Vec::new();
 
@@ -44,7 +46,20 @@ fn main() -> Result<()> {
                     paths.push(generate_circle(point, path_thickness / 2.0, CIRCLE_SIDES));
                     path.push(point);
                 }
-                _ => {}
+
+                DCode::SelectAperture(x) => aperture = doc.apertures.get(&x),
+                DCode::Operation(Operation::Flash(flash)) => {
+                    let pos = flash.into();
+                    match aperture {
+                        Some(Aperture::Circle(circle)) => {
+                            paths.push(generate_circle(pos, circle.diameter / 2.0, CIRCLE_SIDES))
+                        }
+                        Some(Aperture::Rectangle(rect) | Aperture::Obround(rect)) => {
+                            paths.push(generate_rectangle(pos, Point::new(rect.x, rect.y)));
+                        }
+                        _ => {}
+                    }
+                }
             },
             _ => {}
         }

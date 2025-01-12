@@ -6,6 +6,12 @@ use nalgebra::Vector2;
 #[derive(Deref, DerefMut, Add, Sub, Mul, Div, Clone, Copy)]
 pub struct Point(Vector2<f64>);
 
+impl Point {
+    pub fn new(x: f64, y: f64) -> Self {
+        Vector2::new(x, y).into()
+    }
+}
+
 impl From<Vector2<f64>> for Point {
     fn from(value: Vector2<f64>) -> Self {
         Self(value)
