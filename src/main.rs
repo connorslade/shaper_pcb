@@ -1,93 +1,112 @@
 use std::{
-    f64,
+    f64::{self, consts::PI},
     fs::{self, File},
     io::BufReader,
+    mem,
 };
 
 use anyhow::Result;
-use gerber_types::{Aperture, Command, DCode, FunctionCode, Operation};
-use svg::{
-    node::element::{path::Data, Circle, Path, Rectangle},
-    Document,
+use gerber_types::{Command, DCode, FunctionCode, Operation};
+use i_overlay::{
+    core::{fill_rule::FillRule, overlay_rule::OverlayRule},
+    float::single::SingleFloatOverlay,
 };
+use itertools::Itertools;
+use svg::{node::element::Polygon, Document};
+
+type Point = [f64; 2];
+const CIRCLE_SIDES: u32 = 20;
 
 fn main() -> Result<()> {
-    let input = File::open("/home/connorslade/Documents/LibrePCB/projects/Relay_Logic/output/v1/gerber/Relay_Logic_COPPER-TOP.gbr")?;
+    let input = File::open("/home/connorslade/Documents/LibrePCB/projects/Relay Logic/RS_Latch/output/v1/gerber/Relay_Logic_COPPER-TOP.gbr")?;
     let doc = gerber_parser::parser::parse_gerber(BufReader::new(input));
 
-    let mut svg = Document::new();
+    let path_thickness = 0.5 / 2.0;
 
-    let mut aperture = None;
-    let mut path = Data::new();
+    let mut path = Vec::new();
+    let mut paths = Vec::new();
 
     for cmd in doc.commands {
         match cmd {
             Command::FunctionCode(FunctionCode::DCode(code)) => match code {
-                DCode::SelectAperture(x) => aperture = doc.apertures.get(&x),
-                DCode::Operation(Operation::Flash(flash)) => {
-                    let x: f64 = flash.x.unwrap().into();
-                    let y: f64 = flash.y.unwrap().into();
-                    match aperture {
-                        Some(Aperture::Circle(circle)) => {
-                            let node = Circle::new()
-                                .set("cx", x)
-                                .set("cy", y)
-                                .set("r", circle.diameter / 2.0)
-                                .set("fill", "black")
-                                .set("stroke", "black")
-                                .set("stroke-width", "0");
-                            svg = svg.add(node);
-                        }
-                        Some(Aperture::Rectangle(rect) | Aperture::Obround(rect)) => {
-                            let node = Rectangle::new()
-                                .set("x", x)
-                                .set("y", y)
-                                .set("width", rect.x)
-                                .set("height", rect.y)
-                                .set("fill", "black")
-                                .set("stroke", "black")
-                                .set("stroke-width", "0");
-                            svg = svg.add(node);
-                        }
-                        _ => {}
-                    }
-                }
                 DCode::Operation(Operation::Move(mov)) => {
+                    if !path.is_empty() {
+                        paths.push(close_path(&mem::take(&mut path), path_thickness));
+                    }
+
                     let x: f64 = mov.x.unwrap().into();
                     let y: f64 = mov.y.unwrap().into();
-
-                    if !path.is_empty() {
-                        let node = Path::new()
-                            .set("fill", "none")
-                            .set("stroke", "black")
-                            .set("stroke-width", "0.5")
-                            .set("stroke-linecap", "round")
-                            .set("d", path);
-                        svg = svg.add(node);
-                    }
-
-                    path = Data::new().move_to((x, y));
+                    paths.push(generate_circle([x, y], path_thickness / 2.0, CIRCLE_SIDES));
+                    path.push([x, y]);
                 }
                 DCode::Operation(Operation::Interpolate(pos, _offset)) => {
                     let x: f64 = pos.x.unwrap().into();
                     let y: f64 = pos.y.unwrap().into();
-                    path = path.line_to((x, y));
+                    paths.push(generate_circle([x, y], path_thickness / 2.0, CIRCLE_SIDES));
+                    path.push([x, y]);
                 }
+                _ => {}
             },
             _ => {}
         }
     }
 
     if !path.is_empty() {
-        let node = Path::new()
-            .set("fill", "none")
-            .set("stroke", "black")
-            .set("stroke-width", "0.5")
-            .set("stroke-linecap", "round")
-            .set("d", path);
+        paths.push(close_path(&path, path_thickness));
+    }
+
+    let mut union = vec![vec![paths.remove(0)]];
+    for path in paths.into_iter() {
+        union = union.overlay(&[path], OverlayRule::Union, FillRule::EvenOdd);
+    }
+
+    let mut svg = Document::new();
+
+    for shape in union.into_iter().flatten() {
+        let node = Polygon::new().set(
+            "points",
+            shape.iter().map(|x| (x[0], x[1])).collect::<Vec<_>>(),
+        );
         svg = svg.add(node);
     }
 
     fs::write("out.svg", svg.to_string())?;
     Ok(())
+}
+
+/// Converts the input line into a polygon with the defined thickness
+fn close_path(path: &Vec<Point>, path_thickness: f64) -> Vec<Point> {
+    let mut out = Vec::new();
+    let half_thickness = path_thickness / 2.0;
+
+    for (p1, p2) in path.iter().tuple_windows() {
+        let dx = p2[0] - p1[0];
+        let dy = p2[1] - p1[1];
+        let length = (dx * dx + dy * dy).sqrt();
+
+        let px = -dy / length * half_thickness;
+        let py = dx / length * half_thickness;
+
+        out.push([p1[0] + px, p1[1] + py]);
+        out.push([p1[0] - px, p1[1] - py]);
+        out.push([p2[0] - px, p2[1] - py]);
+        out.push([p2[0] + px, p2[1] + py]);
+    }
+
+    out
+}
+
+/// Generates a polygon approxapating a circle with the defined number of sides.
+fn generate_circle(center: Point, radius: f64, sides: u32) -> Vec<Point> {
+    let mut out = Vec::new();
+
+    for i in 0..sides {
+        let angle = (i as f64 / sides as f64) * 2.0 * PI;
+        out.push([
+            center[0] + angle.cos() * radius,
+            center[1] + angle.sin() * radius,
+        ]);
+    }
+
+    out
 }
