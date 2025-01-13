@@ -37,12 +37,10 @@ impl Pcb {
 
     pub fn add_drill(&mut self, drill: DrillFile) {
         for (_tool, operations) in drill.holes.iter() {
+            let radius = operations.diameter * self.config.aperture_thickness / 2.0;
             for hole in operations.holes.iter() {
-                self.paths.push(generate_circle(
-                    *hole,
-                    operations.diameter / 2.0,
-                    CIRCLE_SIDES,
-                ));
+                self.paths
+                    .push(generate_circle(*hole, radius, CIRCLE_SIDES));
             }
         }
     }

@@ -20,11 +20,11 @@ pub struct Arguments {
 #[derive(Args)]
 pub struct Configuration {
     /// Aperture radius multiplier
-    #[clap(long, default_value_t = 1.0)]
+    #[clap(long, short, default_value_t = 1.0)]
     pub aperture_thickness: f64,
 
     /// Trace thickness multiplier
-    #[clap(long, default_value_t = 1.0)]
+    #[clap(long, short, default_value_t = 1.0)]
     pub trace_thickness: f64,
 
     /// Ignore traces, only export apatures

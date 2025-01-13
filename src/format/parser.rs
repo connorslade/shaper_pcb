@@ -41,7 +41,6 @@ impl Parser {
             }
 
             if self.next() != char {
-                dbg!(expected);
                 bail!("Character mismatch");
             }
         }
