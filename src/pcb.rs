@@ -46,7 +46,11 @@ impl Pcb {
                 .flatten(),
         );
 
-        let mut svg = Document::new().set("viewBox", (min.x, min.y, max.x - min.x, max.y - min.y));
+        let (width, height) = (max.x - min.x, max.y - min.y);
+        let mut svg = Document::new()
+            .set("viewBox", (min.x, min.y, width, height))
+            .set("width", format!("{width}mm"))
+            .set("height", format!("{height}mm"));
 
         for shape in trace_union.iter().flatten() {
             svg = svg.add(
