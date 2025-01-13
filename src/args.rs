@@ -26,4 +26,8 @@ pub struct Configuration {
     /// Trace thickness multiplier
     #[clap(long, default_value_t = 1.0)]
     pub trace_thickness: f64,
+
+    /// Ignore traces, only export apatures
+    #[clap(long, short, default_value_t = false)]
+    pub pads_only: bool,
 }

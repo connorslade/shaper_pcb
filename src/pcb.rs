@@ -27,11 +27,11 @@ impl Pcb {
     }
 
     pub fn add_guide(&mut self, gerber: GerberDoc) {
-        process_gerber(&self.config, &mut self.guides, gerber);
+        process_gerber(&self.config, &mut self.guides, gerber, true);
     }
 
     pub fn add_traces(&mut self, gerber: GerberDoc) {
-        process_gerber(&self.config, &mut self.paths, gerber);
+        process_gerber(&self.config, &mut self.paths, gerber, false);
     }
 
     pub fn into_svg(self) -> Document {
@@ -84,18 +84,25 @@ fn create_polygon(shape: &[Point], (min, max): (Point, Point)) -> Polygon {
     )
 }
 
-fn process_gerber(config: &Configuration, shapes: &mut Vec<Vec<Point>>, gerber: GerberDoc) {
+fn process_gerber(
+    config: &Configuration,
+    shapes: &mut Vec<Vec<Point>>,
+    gerber: GerberDoc,
+    guide: bool,
+) {
+    let traces = !config.pads_only || guide;
+
     let mut aperture: Option<&Aperture> = None;
     let mut thickness = 0.0;
     let mut path = Vec::new();
 
     for cmd in gerber.commands {
-        let Command::FunctionCode(FunctionCode::DCode(code)) = cmd else {
+        let Ok(Command::FunctionCode(FunctionCode::DCode(code))) = cmd else {
             continue;
         };
 
         match code {
-            DCode::Operation(Operation::Move(mov)) => {
+            DCode::Operation(Operation::Move(mov)) if traces => {
                 thickness = match aperture.unwrap() {
                     Aperture::Circle(circle) => circle.diameter * config.trace_thickness,
                     _ => 0.0,
@@ -109,7 +116,7 @@ fn process_gerber(config: &Configuration, shapes: &mut Vec<Vec<Point>>, gerber: 
                 shapes.push(generate_circle(point, thickness / 2.0, CIRCLE_SIDES));
                 path.push(point);
             }
-            DCode::Operation(Operation::Interpolate(pos, _offset)) => {
+            DCode::Operation(Operation::Interpolate(pos, _offset)) if traces => {
                 let point = pos.into();
                 shapes.push(generate_circle(point, thickness / 2.0, CIRCLE_SIDES));
                 path.push(point);
@@ -133,6 +140,7 @@ fn process_gerber(config: &Configuration, shapes: &mut Vec<Vec<Point>>, gerber: 
                     _ => {}
                 }
             }
+            _ => {}
         }
     }
 
