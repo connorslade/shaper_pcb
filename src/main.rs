@@ -7,10 +7,12 @@ use std::{
 use anyhow::Result;
 use args::Arguments;
 use clap::Parser;
+use format::drill::DrillFile;
 use gerber_parser::gerber_doc::GerberDoc;
 use pcb::Pcb;
 
 mod args;
+mod format;
 mod geometry;
 mod pcb;
 mod point;
@@ -18,10 +20,13 @@ mod point;
 const CIRCLE_SIDES: u32 = 50;
 
 fn main() -> Result<()> {
+    let drill = DrillFile::parse(&fs::read_to_string("/home/connorslade/Documents/LibrePCB/projects/Relay Logic/Better_XOR_Gate/output/v1/gerber/Better_XOR_Gate_DRILLS-PTH.drl")?)?;
+
     let args = Arguments::parse();
 
     let mut pcb = Pcb::new(args.config);
     pcb.add_traces(load_gerber(&args.input)?);
+    pcb.add_drill(drill);
 
     if let Some(outline) = args.outline {
         pcb.add_guide(load_gerber(&outline)?);

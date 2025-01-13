@@ -6,6 +6,7 @@ use svg::{node::element::Polygon, Document};
 
 use crate::{
     args::Configuration,
+    format::drill::DrillFile,
     geometry::{bounds, close_path, generate_circle, generate_rectangle, union_shapes},
     point::Point,
     CIRCLE_SIDES,
@@ -32,6 +33,18 @@ impl Pcb {
 
     pub fn add_traces(&mut self, gerber: GerberDoc) {
         process_gerber(&self.config, &mut self.paths, gerber, false);
+    }
+
+    pub fn add_drill(&mut self, drill: DrillFile) {
+        for (_tool, operations) in drill.holes.iter() {
+            for hole in operations.holes.iter() {
+                self.paths.push(generate_circle(
+                    *hole,
+                    operations.diameter / 2.0,
+                    CIRCLE_SIDES,
+                ));
+            }
+        }
     }
 
     pub fn into_svg(self) -> Document {
