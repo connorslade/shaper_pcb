@@ -142,11 +142,29 @@ fn process_gerber(
                         circle.diameter * config.aperture_thickness / 2.0,
                         CIRCLE_SIDES,
                     )),
-                    Some(Aperture::Rectangle(rect) | Aperture::Obround(rect)) => {
+                    Some(Aperture::Rectangle(rect)) => {
                         shapes.push(generate_rectangle(
                             pos,
                             Point::new(rect.x, rect.y) * config.aperture_thickness,
                         ));
+                    }
+                    Some(Aperture::Obround(rect)) => {
+                        let rect = Point::new(rect.x, rect.y) * config.aperture_thickness;
+                        let radius = rect.x.min(rect.y) / 2.0;
+                        let mut circle = |offset: Point| {
+                            shapes.push(generate_circle(pos + offset, radius, CIRCLE_SIDES));
+                        };
+
+                        let size = if rect.y < rect.x {
+                            circle(Point::new(-rect.x / 2.0 + radius, 0.0));
+                            circle(Point::new(rect.x / 2.0 - radius, 0.0));
+                            Point::new(rect.x - rect.y, rect.y)
+                        } else {
+                            circle(Point::new(0.0, -rect.x / 2.0 + radius));
+                            circle(Point::new(0.0, rect.x / 2.0 - radius));
+                            Point::new(rect.x, rect.x)
+                        };
+                        shapes.push(generate_rectangle(pos, size));
                     }
                     _ => {}
                 }
