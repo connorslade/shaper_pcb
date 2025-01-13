@@ -5,7 +5,7 @@ use clap::{Args, Parser};
 #[derive(Parser)]
 #[command(version, about)]
 pub struct Arguments {
-    /// Gerber file to process
+    /// Gerber / Drill file to process
     pub input: PathBuf,
     /// Optional outline layer
     #[clap(long, short)]
