@@ -114,11 +114,6 @@ fn process_gerber(
 
         match code {
             DCode::Operation(Operation::Move(mov)) if traces => {
-                thickness = match aperture.unwrap() {
-                    Aperture::Circle(circle) => circle.diameter * config.trace_thickness,
-                    _ => 0.0,
-                };
-
                 if !path.is_empty() {
                     shapes.push(close_path(mem::take(&mut path), thickness));
                 }
@@ -133,7 +128,12 @@ fn process_gerber(
                 path.push(point);
             }
 
-            DCode::SelectAperture(x) => aperture = gerber.apertures.get(&x),
+            DCode::SelectAperture(x) => {
+                aperture = gerber.apertures.get(&x);
+                if let Some(Aperture::Circle(circle)) = aperture {
+                    thickness = circle.diameter * config.trace_thickness;
+                }
+            }
             DCode::Operation(Operation::Flash(flash)) => {
                 let pos = flash.into();
                 match aperture {
